@@ -72,6 +72,24 @@ fromEither :: (l -> Result e r) -> Either l r -> Result e r
 fromEither f (Left l) = f l
 fromEither _ (Right r) = Result r
 
+-- a lot of duplication
+fromRightOrErrWithCallStack :: (l -> e) -> Either l r -> Result e r
+fromRightOrErrWithCallStack f (Left l) = f l & errWithCallStack
+fromRightOrErrWithCallStack _ (Right r) = r & Result
+
+fromRightOrErr :: (l -> e) -> Either l r -> Result e r
+fromRightOrErr f (Left l) = f l & err
+fromRightOrErr _ (Right r) = r & Result
+
+-- a lot of duplication
+fromJustOrErrWithCallStack :: e -> Maybe a -> Result e a
+fromJustOrErrWithCallStack e Nothing = e & errWithCallStack
+fromJustOrErrWithCallStack _ (Just a) = a & Result
+
+fromJustOrErr :: e -> Maybe a -> Result e a
+fromJustOrErr e Nothing = e & err
+fromJustOrErr _ (Just a) = a & Result
+
 errorToText :: Show e => Error e -> Text
 errorToText (Error (Just stack) e) = Text.pack (show e) <> "\n" <> Text.pack (prettyCallStack stack)
 errorToText (Error Nothing e) = Text.pack (show e)
