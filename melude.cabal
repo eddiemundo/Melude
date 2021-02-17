@@ -1,4 +1,4 @@
-cabal-version:       >=1.10
+cabal-version:       2.2
 name:                melude
 version:             0.1.0.0
 -- synopsis:
@@ -13,13 +13,7 @@ maintainer:          Jon Shen <document_done@hotmail.com>
 build-type:          Simple
 extra-source-files:  CHANGELOG.md
 
-executable melude
-  main-is:             Main.hs
-
-  ghc-options:         -Wall
-                       -Wincomplete-uni-patterns
-                       -Wincomplete-record-updates
-
+common common-build-depends
   build-depends: 
     base >=4.14 && < 4.15,
     text,
@@ -28,13 +22,13 @@ executable melude
     transformers-base,
     monad-control
 
-  other-modules:
-    Melude.Either,
-    Melude.Maybe,
-    Melude.List,
-    Melude.Result,
-    Melude.ResultT
+common common-ghc-options
+  ghc-options:
+    -Wall
+    -Wincomplete-uni-patterns
+    -Wincomplete-record-updates
 
+common common-default-extensions
   default-extensions:
     BangPatterns
     BinaryLiterals
@@ -160,6 +154,32 @@ executable melude
     -- UndecidableSuperClasses
     -- Unsafe
 
-  -- hs-source-dirs:
+common common-imports
+  import: common-build-depends, common-ghc-options, common-default-extensions
+
   default-language:    Haskell2010
+
+library
+  import: common-imports
+
+  exposed-modules:
+    Melude.Either,
+    Melude.Maybe,
+    Melude.List,
+    Melude.Result,
+    Melude.ResultT
+
+executable melude
+  import: common-imports
+
+  main-is:             Main.hs
+
+  other-modules:
+    Melude.Either,
+    Melude.Maybe,
+    Melude.List,
+    Melude.Result,
+    Melude.ResultT
+
+  -- hs-source-dirs:
 
