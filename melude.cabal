@@ -27,10 +27,13 @@ executable melude
     mtl,
     transformers-base,
     monad-control,
-    monad-validate
 
-
-  other-modules: Melude.Either, Melude.Maybe, Melude.List, Melude.Result, Melude.ResultT
+  other-modules:
+    Melude.Either,
+    Melude.Maybe,
+    Melude.List,
+    Melude.Result,
+    Melude.ResultT
 
   default-extensions:
     BangPatterns
