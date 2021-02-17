@@ -26,7 +26,7 @@ executable melude
     containers,
     mtl,
     transformers-base,
-    monad-control,
+    monad-control
 
   other-modules:
     Melude.Either,
