@@ -1,0 +1,162 @@
+cabal-version:       >=1.10
+name:                melude
+version:             0.1.0.0
+-- synopsis:
+-- description:
+-- bug-reports:
+-- license:
+license-file:        LICENSE
+author:              Jon Shen
+maintainer:          Jon Shen <document_done@hotmail.com>
+-- copyright:
+-- category:
+build-type:          Simple
+extra-source-files:  CHANGELOG.md
+
+executable melude
+  main-is:             Main.hs
+
+  ghc-options:         -Wall
+                       -Wincomplete-uni-patterns
+                       -Wincomplete-record-updates
+
+  build-depends: 
+    base >=4.14 && < 4.15,
+    text,
+    containers,
+    mtl,
+    transformers-base,
+    monad-control,
+    monad-validate
+
+
+  other-modules: Melude.Either, Melude.Maybe, Melude.List, Melude.Result, Melude.ResultT
+
+  default-extensions:
+    BangPatterns
+    BinaryLiterals
+    -- in-other-words
+    ConstraintKinds
+    DeriveDataTypeable
+    -- DeriveFoldable -- implied by DeriveTraversable
+    -- DeriveFunctor -- implied by DeriveTraversable
+    DeriveGeneric
+    DeriveTraversable
+    EmptyCase
+    EmptyDataDecls
+    -- ExplicitForAll -- implied by RankNTypes, ExistentialQuantification, ScopedTypeVariables
+    -- in-other-words
+    FlexibleContexts 
+    FlexibleInstances
+    -- implied by GADTs
+    GADTSyntax
+    HexFloatLiterals
+    -- KindSignatures -- implied by PolyKinds
+    -- implied by FunctionalDependencies
+    MultiParamTypeClasses 
+    StandaloneDeriving
+    -- ConstrainedClassMethods -- implied by MultiParamTypeClasses
+    EmptyDataDeriving
+    ImportQualifiedPost
+    InstanceSigs
+    -- NumericUnderscores
+    PostfixOperators
+    -- in-other-words | implied by ImpredicativeTypes
+    RankNTypes 
+    -- StarIsType -- default
+    -- in-other-words
+    TypeApplications 
+    DeriveLift
+    -- ForeignFunctionInterface -- default
+    GeneralisedNewtypeDeriving
+    NamedFieldPuns
+    -- in-other-words
+    PolyKinds 
+    StandaloneKindSignatures
+    -- TypeSynonymInstances -- implied by FlexibleInstances
+    ExistentialQuantification
+    NamedWildCards
+    ScopedTypeVariables
+    TupleSections
+    -- in-other-words
+    TypeOperators 
+    -- in-other-words
+    GADTs 
+    -- MonoLocalBinds -- implied by GADTs
+    OverloadedStrings
+    -- RecordWildCards
+    -- in-other-words | implied by TypeFamilyDependencies
+    TypeFamilies 
+    -- in-other-words
+    DataKinds 
+    -- in-other-words
+    LambdaCase 
+    -- NegativeLiterals
+    -- UnicodeSyntax
+    DefaultSignatures
+    DerivingVia
+    -- FunctionalDependencies
+    -- NoMonomorphismRestriction -- default
+    RoleAnnotations
+    ViewPatterns
+    -- ExplicitNamespaces -- implied by TypeOperators
+    -- NullaryTypeClasses -- replaced by MultiParamTypeClasses
+    -- OverloadedLists
+    -- ParallelListComp
+    -- UnliftedNewtypes
+    BlockArguments
+    -- DisambiguateRecordFields -- implied by RecordWildCards, DuplicateRecordFields
+    -- LexicalNegation
+    -- LiberalTypeSynonyms
+    MultiWayIf
+    -- RecursiveDo
+    -- TypeFamilyDependencies
+    -- NondecreasingIndentation
+    -- PartialTypeSignatures
+    PatternSynonyms
+    -- TemplateHaskellQuotes -- implied by TemplateHaskell
+    -- ApplicativeDo
+    -- Arrows
+    -- CApiFFI
+    DuplicateRecordFields
+    -- MagicHash
+    -- PackageImports
+    -- QuantifiedConstraints
+    -- QuasiQuotes
+    TemplateHaskell
+    -- TypeInType -- deprecated
+    -- UnboxedSums
+    -- UnboxedTuples
+    -- UnliftedFFITypes
+    -- AllowAmbiguousTypes
+    -- CPP
+    -- CUSKs -- deprecated
+    -- DatatypeContexts -- deprecated
+    -- DeriveAnyClass
+    -- ExtendedDefaultRules
+    -- GHCForeignImportPrim
+    -- ImplicitParams
+    -- ImpredicativeTypes
+    -- IncoherentInstances
+    -- InterruptibleFFI
+    -- LinearTypes
+    -- MonadComprehensions
+    -- NPlusKPatterns
+    -- NoImplicitPrelude -- implied by RebindableSyntax
+    -- OverlappingInstances -- deprecated
+    OverloadedLabels
+    -- QualifiedDo
+    -- RebindableSyntax
+    -- Safe
+    -- StaticPointers
+    -- Strict
+    -- StrictData
+    -- TransformListComp
+    -- TrustWorthy
+    UndecidableInstances
+    -- UndecidableSuperClasses
+    -- Unsafe
+
+  -- hs-source-dirs:
+  default-language:    Haskell2010
+
