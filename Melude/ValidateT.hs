@@ -1,6 +1,6 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Melude.ResultT where
+module Melude.ValidateT where
 
 import Prelude hiding (error)
 import Control.Monad.State.Lazy as Lazy
@@ -10,7 +10,7 @@ import Control.Applicative (Applicative(liftA2))
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import Control.Monad.Reader (MonadReader(ask, local), ReaderT)
-import qualified Melude.ResultT.Internal as Internal
+import qualified Melude.ValidateT.Internal as Internal
 import Data.Sequence (Seq)
 import Control.Category ((>>>))
 import Control.Monad.Trans.Control (MonadTransControl)

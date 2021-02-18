@@ -2,7 +2,7 @@ module Main where
 
 import Prelude hiding (error, fail)
 import GHC.Stack (HasCallStack)
-import Melude.ResultT (MonadResult (errWithCallStack), runValidateT)
+import Melude.ValidateT (MonadResult (errWithCallStack), runValidateT)
 -- import qualified Melude.ResultT as ResultT
 import Control.Monad.State.Strict as Strict
 import Data.Function ((&))
