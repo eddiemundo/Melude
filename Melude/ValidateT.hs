@@ -93,32 +93,24 @@ mapErrors f (ValidateT mr) = mr
     Internal.Success a -> Internal.Success a
   & ValidateT
 
-fromMaybe :: (Applicative m) => ValidateT e m a -> Maybe a -> ValidateT e m a
-fromMaybe r Nothing = r
-fromMaybe _ (Just a) = pure a
-
-fromJustOrErrWithCallStack :: Monad m => e -> Maybe a -> ValidateT e m a
+fromJustOrErrWithCallStack :: MonadValidate e m => e -> Maybe a -> m a
 fromJustOrErrWithCallStack e Nothing = e & errWithCallStack
 fromJustOrErrWithCallStack _ (Just a) = a & pure
 
-fromJustOrErr :: Monad m => e -> Maybe a -> ValidateT e m a
+fromJustOrErr :: MonadValidate e m => e -> Maybe a -> m a
 fromJustOrErr e Nothing = e & err
 fromJustOrErr _ (Just a) = a & pure
 
-fromEither :: Monad m => (l -> e) -> Either l r -> ValidateT e m r
-fromEither f (Left l) = f l & err
-fromEither _ (Right r) = pure r
-
-fromRightOrErrWithCallStack :: Monad m => (l -> e) -> Either l r -> ValidateT e m r
+fromRightOrErrWithCallStack :: MonadValidate e m => (l -> e) -> Either l r -> m r
 fromRightOrErrWithCallStack f (Left l) = f l & errWithCallStack
 fromRightOrErrWithCallStack _ (Right r) = r & pure
 
-fromRightOrErr :: Monad m => (l -> e) -> Either l r -> ValidateT e m r
+fromRightOrErr :: MonadValidate e m => (l -> e) -> Either l r -> m r
 fromRightOrErr f (Left l) = f l & err
 fromRightOrErr _ (Right r) = r & pure
 
-fromResult :: (Applicative m) => Validate e a -> ValidateT e m a
-fromResult (ValidateT (Identity r)) = r & pure & ValidateT
+fromValidate :: (Applicative m) => Validate e a -> ValidateT e m a
+fromValidate (ValidateT (Identity r)) = r & pure & ValidateT
 
 removeCallStacks :: Functor m => ValidateT e m a -> ValidateT e m a
 removeCallStacks (ValidateT mr) = mr 
@@ -130,31 +122,6 @@ removeCallStacks (ValidateT mr) = mr
     success -> success
   & ValidateT
   
--- errorSeqToText :: Show e => Seq (Internal.Failure e) -> Text
--- errorSeqToText errors = errors <&> errorToText & Seq.intersperse "\n" & fold
-
--- errorToText :: Show e => Internal.Failure e -> Text
--- errorToText (Internal.Failure (Just stack) e) = Text.pack (show e) <> "\n" <> Text.pack (prettyCallStack stack)
--- errorToText (Internal.Failure Nothing e) = Text.pack (show e)
-
--- errorsToText :: (Functor m, Show e) => ValidateT e m a -> m Text
--- errorsToText (ValidateT mr) = mr <&> \case
---   Internal.Failures errors -> errors & errorSeqToText
---   Internal.Success _ -> "No errors found."
- 
--- toText :: (Functor m, Show e, Show a) => ValidateT e m a -> m Text 
--- toText (ValidateT mr) = mr <&> (\r -> "Result(" <> bodyToText r <> ")")  
---   where
---     bodyToText = \case
---       Internal.Failures errors -> errors & errorSeqToText
---       Internal.Success a -> show a & Text.pack
-
--- printErrorsToStdout :: (MonadIO m, Show e) => ValidateT e m a -> m ()
--- printErrorsToStdout r = errorsToText r >>= (Text.putStrLn >>> liftIO)
-
--- printToStdout :: (MonadIO m, Show e, Show a) => ValidateT e m a -> m ()
--- printToStdout r = toText r >>= (Text.putStrLn >>> liftIO)
-
 newtype WrappedMonadTrans (t :: (* -> *) -> * -> *) (m :: * -> *) (a :: *)
   = WrappedMonadTrans { unWrappedMonadTrans :: t m a }
   deriving (Functor, Applicative, Monad, MonadTrans, MonadTransControl)
