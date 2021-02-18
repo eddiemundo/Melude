@@ -2,11 +2,11 @@ module Main where
 
 import Prelude hiding (error, fail)
 import GHC.Stack (HasCallStack)
-import Melude.ResultT (MonadResult (errWithCallStack), runResultT)
-import qualified Melude.ResultT as ResultT
+import Melude.ResultT (MonadResult (errWithCallStack), runValidateT)
+-- import qualified Melude.ResultT as ResultT
 import Control.Monad.State.Strict as Strict
 import Data.Function ((&))
-import qualified Melude.Result as Result
+-- import qualified Melude.ResultT as ResultT
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
 
@@ -48,9 +48,40 @@ main :: IO ()
 main = do
   makeExodiaA
     & flip Strict.runStateT [1,2] 
-    & ResultT.printToStdout
+    & runValidateT
+    >>= (\output -> show output & Text.pack & Text.putStrLn)
 
   makeExodiaA
-    & runResultT
-    & flip Strict.runStateT [1,2]
-    >>= (\(r, s) -> ("(" <> Result.toText r <> "," <> (show s & Text.pack) <> ")") & Text.putStrLn) 
+    & runValidateT
+    & flip Strict.runStateT [1,2] 
+    >>= (\output -> show output & Text.pack & Text.putStrLn)
+
+  makeExodiaA
+    & runValidateT
+    & flip Strict.runStateT []
+    >>= (\output -> show output & Text.pack & Text.putStrLn) 
+
+  makeExodiaA
+    & flip Strict.runStateT []
+    & runValidateT
+    >>= (\output -> show output & Text.pack & Text.putStrLn) 
+
+  makeExodiaM
+    & flip Strict.runStateT [1,2] 
+    & runValidateT
+    >>= (\output -> show output & Text.pack & Text.putStrLn)
+
+  makeExodiaM
+    & runValidateT
+    & flip Strict.runStateT [1,2] 
+    >>= (\output -> show output & Text.pack & Text.putStrLn)
+
+  makeExodiaM
+    & runValidateT
+    & flip Strict.runStateT []
+    >>= (\output -> show output & Text.pack & Text.putStrLn) 
+
+  makeExodiaM
+    & flip Strict.runStateT []
+    & runValidateT
+    >>= (\output -> show output & Text.pack & Text.putStrLn) 

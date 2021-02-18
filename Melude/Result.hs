@@ -2,117 +2,69 @@
 module Melude.Result where
 
 import Prelude hiding (fail, error)
-import GHC.Stack (callStack, CallStack, HasCallStack, prettyCallStack)
-import Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
-import Data.Function ((&))
-import Data.Foldable (fold)
-import qualified Data.Text as Text
-import qualified Data.Text.IO as Text
+import GHC.Stack (CallStack, prettyCallStack)
 import Data.Text (Text)
+import qualified Data.Text as Text
+import Data.Sequence.NonEmpty (NESeq)
+import qualified Data.Sequence.NonEmpty as NonEmptySeq
 import Data.Functor ((<&>))
-import Control.Category ((>>>))
+import Data.Function ((&))
+import Data.Foldable (Foldable(fold))
 
-data Error e = Error !(Maybe CallStack) !e deriving Functor
+type NonEmptySeq a = NESeq a
 
-data Result e a
-  = Errors !(Seq (Error e))
-  | Result a
+data Failure e = Failure !(Maybe CallStack) !e
   deriving Functor
 
-pattern Empty :: Result e a
-pattern Empty = Errors Seq.Empty
+data Result e a
+  = Failures !(NonEmptySeq (Failure e))
+  | Success a
+  deriving Functor
 
-pattern Cons :: e -> Seq e -> Result e a
-pattern Cons error remainingErrors <- (toErrors -> error Seq.:<| remainingErrors)
+-- pattern Empty :: Result e a
+-- pattern Empty = Errors Seq.Empty
 
-pattern Snoc :: Seq e -> e -> Result e a
-pattern Snoc remainingErrors error <- (toErrors -> remainingErrors Seq.:|> error)
+-- pattern Cons :: e -> Seq e -> Result e a
+-- pattern Cons error remainingErrors <- (toErrors -> error Seq.:<| remainingErrors)
 
-toErrors :: Result e a -> Seq e
-toErrors (Errors errors) = fmap (\(Error _ e) -> e) errors
-toErrors _ = Seq.empty
+-- pattern Snoc :: Seq e -> e -> Result e a
+-- pattern Snoc remainingErrors error <- (toErrors -> remainingErrors Seq.:|> error)
 
-containsError :: Eq e => e -> Result e a -> Bool
-containsError error result
-  | elem error errors = True
-  | otherwise = False
-  where
-    errors = toErrors result
+-- toErrors :: Result e a -> Seq e
+-- toErrors (Errors errors) = fmap (\(Error _ e) -> e) errors
+-- toErrors _ = Seq.empty
 
-{-# COMPLETE Empty, Cons #-}
-{-# COMPLETE Empty, Snoc #-}
+-- containsError :: Eq e => e -> Result e a -> Bool
+-- containsError error result
+--   | elem error errors = True
+--   | otherwise = False
+--   where
+--     errors = toErrors result
+
+-- {-# COMPLETE Empty, Cons #-}
+-- {-# COMPLETE Empty, Snoc #-}
+
+
+failureToText :: Show e => Failure e -> Text
+failureToText (Failure (Just stack) e) = Text.pack (show e) <> "\n" <> Text.pack (prettyCallStack stack)
+failureToText (Failure Nothing e) = Text.pack (show e)
+
+failuresToText :: Show e => NonEmptySeq (Failure e) -> Text
+failuresToText failures = failures <&> failureToText & NonEmptySeq.intersperse "\n" & fold
+
+instance (Show e, Show a) => Show (Result e a) where
+  show (Failures failures) = "Failures:\n" <> failuresToText failures & Text.unpack
+  show (Success a) = "Success(" <> show a <> ")"
 
 instance Applicative (Result e) where
-  pure = Result
-  (<*>) (Errors leftErrors) (Errors rightErrors) = Errors (leftErrors <> rightErrors)
-  (<*>) (Errors errors) _ = Errors errors
-  (<*>) _ (Errors errors) = Errors errors
-  (<*>) (Result f) (Result a) = Result (f a)
+  pure = Success
+
+  (<*>) (Failures leftErrors) (Failures rightErrors) = Failures (leftErrors <> rightErrors)
+  (<*>) (Failures failures) _ = Failures failures
+  (<*>) _ (Failures failures) = Failures failures
+  (<*>) (Success f) (Success a) = Success (f a)
 
 instance Monad (Result e) where
-  (>>=) (Errors errors) _ = Errors errors
-  (>>=) (Result a) f = f a
-
-errWithCallStack :: HasCallStack => e -> Result e a
-errWithCallStack e = Errors (Seq.singleton (Error (Just callStack) e))
-
-err :: e -> Result e a
-err e = Errors (Seq.singleton (Error Nothing e))
-
-mapErrors :: (e -> e') -> Result e a -> Result e' a
-mapErrors f (Errors errors) = Errors ((fmap . fmap) f errors)
-mapErrors _ (Result a) = Result a
-
-fromMaybe :: Result e a -> Maybe a -> Result e a
-fromMaybe result Nothing = result
-fromMaybe _ (Just a) = Result a
-
-fromEither :: (l -> Result e r) -> Either l r -> Result e r
-fromEither f (Left l) = f l
-fromEither _ (Right r) = Result r
-
--- a lot of duplication
-fromRightOrErrWithCallStack :: (l -> e) -> Either l r -> Result e r
-fromRightOrErrWithCallStack f (Left l) = f l & errWithCallStack
-fromRightOrErrWithCallStack _ (Right r) = r & Result
-
-fromRightOrErr :: (l -> e) -> Either l r -> Result e r
-fromRightOrErr f (Left l) = f l & err
-fromRightOrErr _ (Right r) = r & Result
-
--- a lot of duplication
-fromJustOrErrWithCallStack :: e -> Maybe a -> Result e a
-fromJustOrErrWithCallStack e Nothing = e & errWithCallStack
-fromJustOrErrWithCallStack _ (Just a) = a & Result
-
-fromJustOrErr :: e -> Maybe a -> Result e a
-fromJustOrErr e Nothing = e & err
-fromJustOrErr _ (Just a) = a & Result
-
-errorToText :: Show e => Error e -> Text
-errorToText (Error (Just stack) e) = Text.pack (show e) <> "\n" <> Text.pack (prettyCallStack stack)
-errorToText (Error Nothing e) = Text.pack (show e)
-
-errorSequenceToText :: Show e => Seq (Error e) -> Text
-errorSequenceToText errors = errors <&> errorToText & Seq.intersperse "\n" & fold
-
-errorsToText :: Show e => Result e a -> Text
-errorsToText = \case
-  Errors errors -> errors & errorSequenceToText
-  Result _ -> "No errors found."
-
-toText :: (Show e, Show a) => Result e a -> Text
-toText r = "Result(" <> bodyToText r <> ")"
-  where
-    bodyToText = \case
-      Errors errors -> errors & errorSequenceToText
-      Result a -> show a & Text.pack 
-
-printErrorsToStdout :: Show e => Result e a -> IO ()
-printErrorsToStdout (Result _) = pure ()
-printErrorsToStdout (Errors errors) = errors & errorSequenceToText & Text.putStrLn
-
-printToStdout :: (Show e, Show a) => Result e a -> IO ()
-printToStdout = toText >>> Text.putStrLn
+  (>>=) (Failures failures) _ = Failures failures
+  (>>=) (Success a) f = f a
 

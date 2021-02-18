@@ -23,5 +23,5 @@ toEither :: l -> [r] -> Either l (NonEmpty r)
 toEither l rs = 
   case NonEmpty.nonEmpty rs of
     Nothing -> Left l
-    Just rs -> Right rs
+    Just nonEmptyList -> Right nonEmptyList
 

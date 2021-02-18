@@ -11,7 +11,7 @@
         haskell-compiler-name = "ghc8104";
         haskell-nix-pkgs = haskell-nix.legacyPackages.${system};
         pkgs = import nixpkgs { inherit system; };
-        project = haskell-nix-pkgs.haskell-nix.cabalProject' {
+        project = haskell-nix-pkgs.haskell-nix.project' {
           src = ./.;
           compiler-nix-name = haskell-compiler-name;
         };
