@@ -2,7 +2,7 @@ module Main where
 
 import Prelude hiding (error, fail)
 import GHC.Stack (HasCallStack)
-import Melude.ValidateT (MonadResult (errWithCallStack), runValidateT)
+import Melude.ValidateT (MonadValidate (errWithCallStack), runValidateT)
 -- import qualified Melude.ResultT as ResultT
 import Control.Monad.State.Strict as Strict
 import Data.Function ((&))
@@ -19,14 +19,14 @@ data Error
 newtype Constraint = Constraint Int deriving Show
 newtype Name = Name Int deriving Show
 
-getConstraint :: (HasCallStack, MonadState [Int] m, MonadResult Error m) => m Constraint
+getConstraint :: (HasCallStack, MonadState [Int] m, MonadValidate Error m) => m Constraint
 getConstraint = do
   int <- get >>= \case
     h : t -> put t >> pure h
     _ -> errWithCallStack ConstraintNotFoundError
   Constraint int & pure
 
-getName :: (HasCallStack, MonadState [Int] m, MonadResult Error m) => m Name
+getName :: (HasCallStack, MonadState [Int] m, MonadValidate Error m) => m Name
 getName = do
   int <- get >>= \case
     h : t -> put t >> pure h
@@ -35,13 +35,13 @@ getName = do
 
 data Exodia = Exodia Constraint Name deriving Show
 
-makeExodiaM :: (HasCallStack, Applicative m, MonadState [Int] m, MonadResult Error m) => m Exodia
+makeExodiaM :: (HasCallStack, Applicative m, MonadState [Int] m, MonadValidate Error m) => m Exodia
 makeExodiaM = do
   c <- getConstraint
   n <- getName
   Exodia c n & pure
 
-makeExodiaA :: (HasCallStack, Applicative m, MonadState [Int] m, MonadResult Error m) => m Exodia
+makeExodiaA :: (HasCallStack, Applicative m, MonadState [Int] m, MonadValidate Error m) => m Exodia
 makeExodiaA = Exodia <$> getConstraint <*> getName
 
 main :: IO ()

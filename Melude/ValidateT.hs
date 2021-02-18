@@ -63,11 +63,11 @@ instance MonadState s m => MonadState s (ValidateT e m) where
   state :: (s -> (a, s)) -> ValidateT e m a 
   state f = state f & lift
 
-class Monad m => MonadResult e m | m -> e where
+class Monad m => MonadValidate e m | m -> e where
   errWithCallStack :: HasCallStack => e -> m a
   err :: e -> m a
 
-instance Monad m => MonadResult e (ValidateT e m) where
+instance Monad m => MonadValidate e (ValidateT e m) where
   errWithCallStack :: HasCallStack => e -> ValidateT e m a
   errWithCallStack e = Internal.Failures (NonEmptySeq.singleton (Internal.Failure (Just callStack) e)) 
     & pure
@@ -159,11 +159,11 @@ newtype WrappedMonadTrans (t :: (* -> *) -> * -> *) (m :: * -> *) (a :: *)
   = WrappedMonadTrans { unWrappedMonadTrans :: t m a }
   deriving (Functor, Applicative, Monad, MonadTrans, MonadTransControl)
 
-instance (MonadTransControl t, Monad (t m), MonadResult e m) => MonadResult e (WrappedMonadTrans t m) where
+instance (MonadTransControl t, Monad (t m), MonadValidate e m) => MonadValidate e (WrappedMonadTrans t m) where
   errWithCallStack = lift . errWithCallStack
   err = lift . err
 
-deriving via (WrappedMonadTrans IdentityT m) instance MonadResult e m => MonadResult e (IdentityT m)
-deriving via (WrappedMonadTrans (ReaderT r) m) instance MonadResult e m => MonadResult e (ReaderT r m)
-deriving via (WrappedMonadTrans (Lazy.StateT s) m) instance MonadResult e m => MonadResult e (Lazy.StateT s m)
-deriving via (WrappedMonadTrans (Strict.StateT s) m) instance MonadResult e m => MonadResult e (Strict.StateT s m)
+deriving via (WrappedMonadTrans IdentityT m) instance MonadValidate e m => MonadValidate e (IdentityT m)
+deriving via (WrappedMonadTrans (ReaderT r) m) instance MonadValidate e m => MonadValidate e (ReaderT r m)
+deriving via (WrappedMonadTrans (Lazy.StateT s) m) instance MonadValidate e m => MonadValidate e (Lazy.StateT s m)
+deriving via (WrappedMonadTrans (Strict.StateT s) m) instance MonadValidate e m => MonadValidate e (Strict.StateT s m)
