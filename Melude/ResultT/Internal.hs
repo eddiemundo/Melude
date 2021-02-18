@@ -1,5 +1,5 @@
 {-# LANGUAGE FunctionalDependencies #-}
-module Melude.Result where
+module Melude.ResultT.Internal where
 
 import Prelude hiding (fail, error)
 import GHC.Stack (CallStack, prettyCallStack)

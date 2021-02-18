@@ -10,7 +10,7 @@ import Control.Applicative (Applicative(liftA2))
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import Control.Monad.Reader (MonadReader(ask, local), ReaderT)
-import qualified Melude.Result as Internal
+import qualified Melude.ResultT.Internal as Internal
 import Data.Sequence (Seq)
 import Control.Category ((>>>))
 import Control.Monad.Trans.Control (MonadTransControl)
@@ -25,7 +25,7 @@ import qualified Data.Sequence.NonEmpty as NonEmptySeq
 newtype ValidateT e m a = ValidateT { runValidateT :: m (Internal.Result e a) }
   deriving Functor
 
-type Result e a = ValidateT e Identity a
+type Validate e a = ValidateT e Identity a
 
 instance Applicative m => Applicative (ValidateT e m) where
   pure a = a & Internal.Success & pure & ValidateT
@@ -117,7 +117,7 @@ fromRightOrErr :: Monad m => (l -> e) -> Either l r -> ValidateT e m r
 fromRightOrErr f (Left l) = f l & err
 fromRightOrErr _ (Right r) = r & pure
 
-fromResult :: (Applicative m) => Result e a -> ValidateT e m a
+fromResult :: (Applicative m) => Validate e a -> ValidateT e m a
 fromResult (ValidateT (Identity r)) = r & pure & ValidateT
 
 removeCallStacks :: Functor m => ValidateT e m a -> ValidateT e m a
