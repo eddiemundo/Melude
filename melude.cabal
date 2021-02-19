@@ -170,6 +170,7 @@ library
     Melude.Either,
     Melude.Maybe,
     Melude.List,
+    Melude.Monad,
     Melude.ValidateT
 
 executable melude
@@ -181,6 +182,7 @@ executable melude
     Melude.Either,
     Melude.Maybe,
     Melude.List,
+    Melude.Monad,
     Melude.ValidateT.Internal,
     Melude.ValidateT
 

@@ -43,7 +43,8 @@ data Result e a
 
 -- {-# COMPLETE Empty, Cons #-}
 -- {-# COMPLETE Empty, Snoc #-}
-
+failureToError :: Failure e -> e
+failureToError (Failure _ e) = e
 
 failureToText :: Show e => Failure e -> Text
 failureToText (Failure (Just stack) e) = Text.pack (show e) <> "\n" <> Text.pack (prettyCallStack stack)

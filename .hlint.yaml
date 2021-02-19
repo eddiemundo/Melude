@@ -61,6 +61,7 @@
 - ignore: {name: Use newtype instead of data}
 - ignore: {name: Use infix}
 - ignore: {name: Use <$>}
+- ignore: {name: Use <$}
 
 
 # Define some custom infix operators
