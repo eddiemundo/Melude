@@ -3,12 +3,11 @@ module Main where
 import Prelude hiding (error, fail)
 import GHC.Stack (HasCallStack)
 import Melude.ValidateT (MonadValidate (errWithCallStack, err, orElse), runValidateT)
--- import qualified Melude.ResultT as ResultT
 import Control.Monad.State.Strict as Strict
 import Data.Function ((&))
--- import qualified Melude.ResultT as ResultT
 import qualified Data.Text as Text
 import qualified Data.Text.IO as Text
+import Melude.StateT.Strict (evaluateStateT)
 
 data Error
   = PropertyNotFoundError
@@ -50,22 +49,17 @@ getNameFail = err NameNotFoundError <* put 1
 getNameSuccess :: (MonadState Int m, MonadValidate Error m) => m Name
 getNameSuccess = (Name 1 & pure) <* put 2
 
-(<<) :: Monad m => m a -> m b -> m a
-(<<) lma rma = do
-  a <- lma
-  _ <- rma
-  pure a
-
 getNameSuccessFail :: (MonadState Int m, MonadValidate Error m) => m Name
 getNameSuccessFail = getNameFail & orElse (const getNameSuccess)
 
 getNameFailFail :: (MonadState Int m, MonadValidate Error m) => m Name
 getNameFailFail = getNameFail & orElse (const getNameFail)
+
 main :: IO ()
 main = do
   getNameSuccessFail
     & runValidateT
-    & flip runStateT 0
+    & evaluateStateT 0 --flip runStateT 0
     >>= (\output -> show output & Text.pack & Text.putStrLn)
 
   getNameSuccessFail

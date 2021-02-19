@@ -171,6 +171,7 @@ library
     Melude.Maybe,
     Melude.List,
     Melude.Monad,
+    Melude.StateT.Strict,
     Melude.ValidateT
 
 executable melude
@@ -183,8 +184,9 @@ executable melude
     Melude.Maybe,
     Melude.List,
     Melude.Monad,
-    Melude.ValidateT.Internal,
-    Melude.ValidateT
+    Melude.StateT.Strict,
+    Melude.ValidateT,
+    Melude.ValidateT.Internal
 
   -- hs-source-dirs:
 
