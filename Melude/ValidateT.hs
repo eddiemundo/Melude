@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Melude.ValidateT where
 
-import Prelude hiding (error)
+import Prelude hiding (error, or)
 import Control.Monad.State.Lazy as Lazy
 import Control.Monad.State.Strict as Strict
 import GHC.Stack (HasCallStack, callStack)
@@ -19,6 +19,8 @@ import Control.Monad.Base (MonadBase(liftBase))
 import qualified Data.Sequence as Seq
 import Data.Functor.Identity (Identity(Identity))
 import qualified Data.Sequence.NonEmpty as NonEmptySeq
+
+
 
 type NonEmptySeq a = Internal.NonEmptySeq a
 
@@ -37,6 +39,8 @@ instance Monad m => Monad (ValidateT e m) where
   (>>=) (ValidateT mr) f = ValidateT $ mr >>= \case
     Internal.Success a -> f a & runValidateT
     Internal.Failures errors -> Internal.Failures errors & pure
+
+
 
 instance MonadTrans (ValidateT e) where
   lift :: Functor m => m a -> ValidateT e m a
@@ -68,7 +72,19 @@ instance MonadState s m => MonadState s (ValidateT e m) where
 class Monad m => MonadValidate e m | m -> e where
   errWithCallStack :: HasCallStack => e -> m a
   err :: e -> m a
-  orElse :: (NonEmptySeq e -> m a) -> m a -> m a
+  correct :: (NonEmptySeq e -> m a) -> m a -> m a
+  -- similar to Alternative's (<|>)
+  -- orA accumulates errors if both fail
+  orA :: m a -> m a -> m a
+  -- orM uses the second's errors if both fail
+  orM :: m a -> m a -> m a
+
+-- run f a over and over again until f a fails.
+-- many :: Alternative f => f a -> f [a]
+-- many v = liftA2 (:) v ( ( liftA2 (:) v many_v ) <|> pure [] ) <|> pure []
+--   where
+--     many_v = some_v <|> pure []
+--     some_v = liftA2 (:) v many_v
 
 instance Monad m => MonadValidate e (ValidateT e m) where
   errWithCallStack :: HasCallStack => e -> ValidateT e m a
@@ -81,12 +97,27 @@ instance Monad m => MonadValidate e (ValidateT e m) where
     & pure 
     & ValidateT
 
-  orElse :: (NonEmptySeq e -> ValidateT e m a) -> ValidateT e m a -> ValidateT e m a
-  orElse handle (ValidateT mr) = mr 
+  correct :: (NonEmptySeq e -> ValidateT e m a) -> ValidateT e m a -> ValidateT e m a
+  correct handle (ValidateT mr) = mr 
     >>= \case
       Internal.Failures failures -> failures <&> Internal.failureToError & handle & runValidateT
       success -> success & pure
     & ValidateT
+
+  orA :: ValidateT e m a -> ValidateT e m a -> ValidateT e m a
+  orA (ValidateT mr1) (ValidateT mr2) = ValidateT $ or <$> mr1 <*> mr2
+    where
+      or :: Internal.Result e a -> Internal.Result e a -> Internal.Result e a
+      or r1@(Internal.Success _) _ = r1
+      or (Internal.Failures failures1) (Internal.Failures failures2) = Internal.Failures (failures1 <> failures2)
+      or (Internal.Failures _) r2 = r2
+
+  orM :: ValidateT e m a -> ValidateT e m a -> ValidateT e m a
+  orM (ValidateT mr1) (ValidateT mr2) = ValidateT $ or <$> mr1 <*> mr2
+    where
+      or :: Internal.Result e a -> Internal.Result e a -> Internal.Result e a
+      or r1@(Internal.Success _) _ = r1
+      or (Internal.Failures _) r2 = r2
 
 toErrors :: (Functor m) => ValidateT e m a -> m (Seq e)
 toErrors (ValidateT mr) = mr <&> \case
@@ -140,8 +171,14 @@ instance (MonadTransControl t, Monad (t m), MonadValidate e m) => MonadValidate 
   errWithCallStack = lift . errWithCallStack
   err = lift . err
 
-  orElse :: (NonEmptySeq e -> WrappedMonadTrans t m a) -> WrappedMonadTrans t m a -> WrappedMonadTrans t m a
-  orElse handle wmt = liftWith (\run -> orElse (run . handle) (run wmt)) >>= restoreT . pure
+  correct :: (NonEmptySeq e -> WrappedMonadTrans t m a) -> WrappedMonadTrans t m a -> WrappedMonadTrans t m a
+  correct handle wmt = liftWith (\run -> correct (run . handle) (run wmt)) >>= restoreT . pure
+
+  orA :: WrappedMonadTrans t m a -> WrappedMonadTrans t m a -> WrappedMonadTrans t m a
+  orA wmt1 wmt2 = liftWith (\run -> orA (run wmt1) (run wmt2)) >>= restoreT . pure
+
+  orM :: WrappedMonadTrans t m a -> WrappedMonadTrans t m a -> WrappedMonadTrans t m a
+  orM wmt1 wmt2 = liftWith (\run -> orM (run wmt1) (run wmt2)) >>= restoreT . pure
 
 deriving via (WrappedMonadTrans IdentityT m) instance MonadValidate e m => MonadValidate e (IdentityT m)
 deriving via (WrappedMonadTrans (ReaderT r) m) instance MonadValidate e m => MonadValidate e (ReaderT r m)

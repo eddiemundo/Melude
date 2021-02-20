@@ -2,7 +2,7 @@ module Main where
 
 import Prelude hiding (error, fail)
 import GHC.Stack (HasCallStack)
-import Melude.ValidateT (MonadValidate (errWithCallStack, err, orElse), runValidateT)
+import Melude.ValidateT (MonadValidate (errWithCallStack, err, correct, orA), runValidateT, orM)
 import Control.Monad.State.Strict as Strict
 import Data.Function ((&))
 import qualified Data.Text as Text
@@ -50,13 +50,43 @@ getNameSuccess :: (MonadState Int m, MonadValidate Error m) => m Name
 getNameSuccess = (Name 1 & pure) <* put 2
 
 getNameSuccessFail :: (MonadState Int m, MonadValidate Error m) => m Name
-getNameSuccessFail = getNameFail & orElse (const getNameSuccess)
+getNameSuccessFail = getNameFail & correct (const getNameSuccess)
 
 getNameFailFail :: (MonadState Int m, MonadValidate Error m) => m Name
-getNameFailFail = getNameFail & orElse (const getNameFail)
+getNameFailFail = getNameFail & correct (const getNameFail)
 
 main :: IO ()
 main = do
+  getNameSuccess `orA` getNameFail 
+    & runValidateT
+    & evaluateStateT 0
+    >>= (\output -> show output & Text.pack & Text.putStrLn)
+
+  getNameFail `orA` getNameSuccess
+    & runValidateT
+    & evaluateStateT 0
+    >>= (\output -> show output & Text.pack & Text.putStrLn)
+
+  getNameFail `orA` getNameFail
+    & runValidateT
+    & evaluateStateT 0
+    >>= (\output -> show output & Text.pack & Text.putStrLn)
+
+  getNameSuccess `orM` getNameFail 
+    & runValidateT
+    & evaluateStateT 0
+    >>= (\output -> show output & Text.pack & Text.putStrLn)
+
+  getNameFail `orM` getNameSuccess
+    & runValidateT
+    & evaluateStateT 0
+    >>= (\output -> show output & Text.pack & Text.putStrLn)
+
+  getNameFail `orM` getNameFail
+    & runValidateT
+    & evaluateStateT 0
+    >>= (\output -> show output & Text.pack & Text.putStrLn)
+
   getNameSuccessFail
     & runValidateT
     & evaluateStateT 0 --flip runStateT 0
