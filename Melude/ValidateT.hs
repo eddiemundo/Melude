@@ -137,8 +137,11 @@ fromRightOrErr :: MonadValidate e m => (l -> e) -> Either l r -> m r
 fromRightOrErr f (Left l) = f l & err
 fromRightOrErr _ (Right r) = r & pure
 
+fromResult :: Applicative m => Result e a -> ValidateT e m a
+fromResult result = result & pure & ValidateT
+
 fromValidate :: (Applicative m) => Validate e a -> ValidateT e m a
-fromValidate (ValidateT (Identity r)) = r & pure & ValidateT
+fromValidate (ValidateT (Identity r)) = fromResult r
 
 removeCallStacks :: Functor m => ValidateT e m a -> ValidateT e m a
 removeCallStacks (ValidateT mr) = mr 
