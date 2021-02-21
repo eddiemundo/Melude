@@ -164,7 +164,6 @@ library
   import: common-imports
 
   other-modules:
-    Melude.ValidateT.Internal
 
   exposed-modules:
     Melude.Either,
@@ -172,6 +171,7 @@ library
     Melude.List,
     Melude.Monad,
     Melude.StateT.Strict,
+    Melude.Result,
     Melude.ValidateT
 
 executable melude
@@ -185,8 +185,8 @@ executable melude
     Melude.List,
     Melude.Monad,
     Melude.StateT.Strict,
-    Melude.ValidateT,
-    Melude.ValidateT.Internal
+    Melude.Result,
+    Melude.ValidateT
 
   -- hs-source-dirs:
 

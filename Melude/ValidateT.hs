@@ -10,7 +10,7 @@ import Control.Applicative (Applicative(liftA2))
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import Control.Monad.Reader (MonadReader(ask, local), ReaderT)
-import qualified Melude.ValidateT.Internal as Internal
+import qualified Melude.Result as Internal
 import Data.Sequence (Seq)
 import Control.Category ((>>>))
 import Control.Monad.Trans.Control (MonadTransControl (liftWith, restoreT))
@@ -19,8 +19,6 @@ import Control.Monad.Base (MonadBase(liftBase))
 import qualified Data.Sequence as Seq
 import Data.Functor.Identity (Identity(Identity))
 import qualified Data.Sequence.NonEmpty as NonEmptySeq
-
-
 
 type NonEmptySeq a = Internal.NonEmptySeq a
 
@@ -39,8 +37,6 @@ instance Monad m => Monad (ValidateT e m) where
   (>>=) (ValidateT mr) f = ValidateT $ mr >>= \case
     Internal.Success a -> f a & runValidateT
     Internal.Failures errors -> Internal.Failures errors & pure
-
-
 
 instance MonadTrans (ValidateT e) where
   lift :: Functor m => m a -> ValidateT e m a
@@ -78,13 +74,6 @@ class Monad m => MonadValidate e m | m -> e where
   orA :: m a -> m a -> m a
   -- orM uses the second's errors if both fail
   orM :: m a -> m a -> m a
-
--- run f a over and over again until f a fails.
--- many :: Alternative f => f a -> f [a]
--- many v = liftA2 (:) v ( ( liftA2 (:) v many_v ) <|> pure [] ) <|> pure []
---   where
---     many_v = some_v <|> pure []
---     some_v = liftA2 (:) v many_v
 
 instance Monad m => MonadValidate e (ValidateT e m) where
   errWithCallStack :: HasCallStack => e -> ValidateT e m a

@@ -1,5 +1,5 @@
 {-# LANGUAGE FunctionalDependencies #-}
-module Melude.ValidateT.Internal where
+module Melude.Result where
 
 import Prelude hiding (fail, error)
 import GHC.Stack (CallStack, prettyCallStack)
@@ -65,7 +65,11 @@ instance Applicative (Result e) where
   (<*>) _ (Failures failures) = Failures failures
   (<*>) (Success f) (Success a) = Success (f a)
 
+-- (<|>) :: Result e a -> Result e a -> Result e a
+-- (<|>) (Failures _ )
+
 instance Monad (Result e) where
   (>>=) (Failures failures) _ = Failures failures
   (>>=) (Success a) f = f a
+
 
