@@ -10,6 +10,8 @@ import qualified Data.Sequence.NonEmpty as NonEmptySeq
 import Data.Functor ((<&>))
 import Data.Function ((&))
 import Data.Foldable (Foldable(fold))
+import Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
 
 type NonEmptySeq a = NESeq a
 
@@ -21,28 +23,10 @@ data Result e a
   | Success a
   deriving Functor
 
--- pattern Empty :: Result e a
--- pattern Empty = Errors Seq.Empty
+toErrors :: Result e a -> Seq e
+toErrors (Failures failures) = failures <&> failureToError & NonEmptySeq.toSeq
+toErrors _ = Seq.empty
 
--- pattern Cons :: e -> Seq e -> Result e a
--- pattern Cons error remainingErrors <- (toErrors -> error Seq.:<| remainingErrors)
-
--- pattern Snoc :: Seq e -> e -> Result e a
--- pattern Snoc remainingErrors error <- (toErrors -> remainingErrors Seq.:|> error)
-
--- toErrors :: Result e a -> Seq e
--- toErrors (Errors errors) = fmap (\(Error _ e) -> e) errors
--- toErrors _ = Seq.empty
-
--- containsError :: Eq e => e -> Result e a -> Bool
--- containsError error result
---   | elem error errors = True
---   | otherwise = False
---   where
---     errors = toErrors result
-
--- {-# COMPLETE Empty, Cons #-}
--- {-# COMPLETE Empty, Snoc #-}
 failureToError :: Failure e -> e
 failureToError (Failure _ e) = e
 
@@ -64,9 +48,6 @@ instance Applicative (Result e) where
   (<*>) (Failures failures) _ = Failures failures
   (<*>) _ (Failures failures) = Failures failures
   (<*>) (Success f) (Success a) = Success (f a)
-
--- (<|>) :: Result e a -> Result e a -> Result e a
--- (<|>) (Failures _ )
 
 instance Monad (Result e) where
   (>>=) (Failures failures) _ = Failures failures

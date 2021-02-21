@@ -10,7 +10,6 @@ import Control.Applicative (Applicative(liftA2))
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import Control.Monad.Reader (MonadReader(ask, local), ReaderT)
-import qualified Melude.Result as Internal
 import Data.Sequence (Seq)
 import Control.Category ((>>>))
 import Control.Monad.Trans.Control (MonadTransControl (liftWith, restoreT))
@@ -19,24 +18,23 @@ import Control.Monad.Base (MonadBase(liftBase))
 import qualified Data.Sequence as Seq
 import Data.Functor.Identity (Identity(Identity))
 import qualified Data.Sequence.NonEmpty as NonEmptySeq
-
-type NonEmptySeq a = Internal.NonEmptySeq a
+import Melude.Result (Result(Success, Failures), Failure(Failure), NonEmptySeq)
 
 -- Notes:
 -- If we want MonadBaseControl then write a MonadTransControl instance.
-newtype ValidateT e m a = ValidateT { runValidateT :: m (Internal.Result e a) }
+newtype ValidateT e m a = ValidateT { runValidateT :: m (Result e a) }
   deriving Functor
 
 type Validate e a = ValidateT e Identity a
 
 instance Applicative m => Applicative (ValidateT e m) where
-  pure a = a & Internal.Success & pure & ValidateT
+  pure a = a & Success & pure & ValidateT
   (<*>) (ValidateT mrf) (ValidateT mra) = ValidateT $ liftA2 (<*>) mrf mra
 
 instance Monad m => Monad (ValidateT e m) where
   (>>=) (ValidateT mr) f = ValidateT $ mr >>= \case
-    Internal.Success a -> f a & runValidateT
-    Internal.Failures errors -> Internal.Failures errors & pure
+    Success a -> f a & runValidateT
+    Failures errors -> Failures errors & pure
 
 instance MonadTrans (ValidateT e) where
   lift :: Functor m => m a -> ValidateT e m a
@@ -68,7 +66,7 @@ instance MonadState s m => MonadState s (ValidateT e m) where
 class Monad m => MonadValidate e m | m -> e where
   errWithCallStack :: HasCallStack => e -> m a
   err :: e -> m a
-  correct :: (NonEmptySeq e -> m a) -> m a -> m a
+  correct :: (NonEmptySeq (Failure e) -> m a) -> m a -> m a
   -- similar to Alternative's (<|>)
   -- orA accumulates errors if both fail
   orA :: m a -> m a -> m a
@@ -77,40 +75,40 @@ class Monad m => MonadValidate e m | m -> e where
 
 instance Monad m => MonadValidate e (ValidateT e m) where
   errWithCallStack :: HasCallStack => e -> ValidateT e m a
-  errWithCallStack e = Internal.Failures (NonEmptySeq.singleton (Internal.Failure (Just callStack) e)) 
+  errWithCallStack e = Failures (NonEmptySeq.singleton (Failure (Just callStack) e)) 
     & pure
     & ValidateT
 
   err :: e -> ValidateT e m a
-  err e = Internal.Failures (NonEmptySeq.singleton (Internal.Failure Nothing e))
+  err e = Failures (NonEmptySeq.singleton (Failure Nothing e))
     & pure 
     & ValidateT
 
-  correct :: (NonEmptySeq e -> ValidateT e m a) -> ValidateT e m a -> ValidateT e m a
+  correct :: (NonEmptySeq (Failure e) -> ValidateT e m a) -> ValidateT e m a -> ValidateT e m a
   correct handle (ValidateT mr) = mr 
     >>= \case
-      Internal.Failures failures -> failures <&> Internal.failureToError & handle & runValidateT
+      Failures failures -> failures & handle & runValidateT
       success -> success & pure
     & ValidateT
 
   orA :: ValidateT e m a -> ValidateT e m a -> ValidateT e m a
   orA (ValidateT mr1) (ValidateT mr2) = ValidateT $ or <$> mr1 <*> mr2
     where
-      or :: Internal.Result e a -> Internal.Result e a -> Internal.Result e a
-      or r1@(Internal.Success _) _ = r1
-      or (Internal.Failures failures1) (Internal.Failures failures2) = Internal.Failures (failures1 <> failures2)
-      or (Internal.Failures _) r2 = r2
+      or :: Result e a -> Result e a -> Result e a
+      or r1@(Success _) _ = r1
+      or (Failures failures1) (Failures failures2) = Failures (failures1 <> failures2)
+      or (Failures _) r2 = r2
 
   orM :: ValidateT e m a -> ValidateT e m a -> ValidateT e m a
   orM (ValidateT mr1) (ValidateT mr2) = ValidateT $ or <$> mr1 <*> mr2
     where
-      or :: Internal.Result e a -> Internal.Result e a -> Internal.Result e a
-      or r1@(Internal.Success _) _ = r1
-      or (Internal.Failures _) r2 = r2
+      or :: Result e a -> Result e a -> Result e a
+      or r1@(Success _) _ = r1
+      or (Failures _) r2 = r2
 
 toErrors :: (Functor m) => ValidateT e m a -> m (Seq e)
 toErrors (ValidateT mr) = mr <&> \case
-  Internal.Failures failures -> failures <&> (\(Internal.Failure _ e) -> e) & NonEmptySeq.toSeq
+  Failures failures -> failures <&> (\(Failure _ e) -> e) & NonEmptySeq.toSeq
   _ -> Seq.empty
 
 containsError :: (Functor m, Eq e) => e -> ValidateT e m a -> m Bool
@@ -119,8 +117,8 @@ containsError error result = toErrors result <&> elem error
 mapErrors :: Functor m => (e1 -> e2) -> ValidateT e1 m a -> ValidateT e2 m a
 mapErrors f (ValidateT mr) = mr
   <&> \case
-    Internal.Failures errors -> Internal.Failures ((fmap . fmap) f errors) 
-    Internal.Success a -> Internal.Success a
+    Failures errors -> Failures ((fmap . fmap) f errors) 
+    Success a -> Success a
   & ValidateT
 
 fromJustOrErrWithCallStack :: MonadValidate e m => e -> Maybe a -> m a
@@ -145,10 +143,10 @@ fromValidate (ValidateT (Identity r)) = r & pure & ValidateT
 removeCallStacks :: Functor m => ValidateT e m a -> ValidateT e m a
 removeCallStacks (ValidateT mr) = mr 
   <&> \case
-    Internal.Failures failures ->
+    Failures failures ->
       failures
-        <&> (\(Internal.Failure _ e) -> Internal.Failure Nothing e)
-        & Internal.Failures
+        <&> (\(Failure _ e) -> Failure Nothing e)
+        & Failures
     success -> success
   & ValidateT
   
@@ -160,7 +158,7 @@ instance (MonadTransControl t, Monad (t m), MonadValidate e m) => MonadValidate 
   errWithCallStack = lift . errWithCallStack
   err = lift . err
 
-  correct :: (NonEmptySeq e -> WrappedMonadTrans t m a) -> WrappedMonadTrans t m a -> WrappedMonadTrans t m a
+  correct :: (NonEmptySeq (Failure e) -> WrappedMonadTrans t m a) -> WrappedMonadTrans t m a -> WrappedMonadTrans t m a
   correct handle wmt = liftWith (\run -> correct (run . handle) (run wmt)) >>= restoreT . pure
 
   orA :: WrappedMonadTrans t m a -> WrappedMonadTrans t m a -> WrappedMonadTrans t m a
