@@ -12,7 +12,6 @@ import Data.Function ((&))
 import Data.Foldable (Foldable(fold))
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
-import Melude.NonEmptySeq (NESeq((:<||)))
 
 type NonEmptySeq a = NESeq a
 
@@ -27,8 +26,8 @@ data Result e a
 -- pattern Fail :: e -> CallStack -> Result e a
 -- pattern Fail e cs = Failures ((Failure (Just cs) e) :<|| Seq.Empty)
 
-fromErrorWithCallStack :: e -> CallStack -> Result e a
-fromErrorWithCallStack error stack = error & Failure (Just stack) & NonEmptySeq.singleton & Failures
+fromErrorWithCallStack :: CallStack -> e -> Result e a
+fromErrorWithCallStack stack error = error & Failure (Just stack) & NonEmptySeq.singleton & Failures
 
 fromError :: e -> Result e a
 fromError error = error & Failure Nothing & NonEmptySeq.singleton & Failures
