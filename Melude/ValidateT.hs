@@ -73,6 +73,8 @@ class Monad m => MonadValidate e m | m -> e where
   -- orM uses the second's errors if both fail
   orM :: m a -> m a -> m a
 
+--  reifyErrors :: m a -> m (Result e a)
+
 instance Monad m => MonadValidate e (ValidateT e m) where
   errWithCallStack :: HasCallStack => e -> ValidateT e m a
   errWithCallStack e = Failures (NonEmptySeq.singleton (Failure (Just callStack) e)) 
@@ -105,6 +107,9 @@ instance Monad m => MonadValidate e (ValidateT e m) where
       or :: Result e a -> Result e a -> Result e a
       or r1@(Success _) _ = r1
       or (Failures _) r2 = r2
+
+tolerate :: MonadValidate e m => m a -> m (Result e a)
+tolerate ma = correct (\failures -> Failures failures & pure) (ma <&> Success)
 
 toErrors :: (Functor m) => ValidateT e m a -> m (Seq e)
 toErrors (ValidateT mr) = mr <&> \case

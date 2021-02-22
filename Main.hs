@@ -2,7 +2,7 @@ module Main where
 
 import Prelude hiding (error, fail)
 import GHC.Stack (HasCallStack)
-import Melude.ValidateT (MonadValidate (errWithCallStack, err, correct, orA), runValidateT, orM)
+import Melude.ValidateT (MonadValidate (errWithCallStack, err, correct, orA), runValidateT, orM, tolerate)
 import Control.Monad.State.Strict as Strict
 import Data.Function ((&))
 import qualified Data.Text as Text
@@ -55,94 +55,99 @@ getNameSuccessFail = getNameFail & correct (const getNameSuccess)
 getNameFailFail :: (MonadState Int m, MonadValidate Error m) => m Name
 getNameFailFail = getNameFail & correct (const getNameFail)
 
+showAsTextThenPrint :: Show a => a -> IO ()
+showAsTextThenPrint a = show a & Text.pack & Text.putStrLn
+
 main :: IO ()
 main = do
+  getNameFail & tolerate & runValidateT & evaluateStateT 0 >>= showAsTextThenPrint
+
   getNameSuccess `orA` getNameFail 
     & runValidateT
     & evaluateStateT 0
-    >>= (\output -> show output & Text.pack & Text.putStrLn)
+    >>= showAsTextThenPrint
 
   getNameFail `orA` getNameSuccess
     & runValidateT
     & evaluateStateT 0
-    >>= (\output -> show output & Text.pack & Text.putStrLn)
+    >>= showAsTextThenPrint
 
   getNameFail `orA` getNameFail
     & runValidateT
     & evaluateStateT 0
-    >>= (\output -> show output & Text.pack & Text.putStrLn)
+    >>= showAsTextThenPrint
 
   getNameSuccess `orM` getNameFail 
     & runValidateT
     & evaluateStateT 0
-    >>= (\output -> show output & Text.pack & Text.putStrLn)
+    >>= showAsTextThenPrint
 
   getNameFail `orM` getNameSuccess
     & runValidateT
     & evaluateStateT 0
-    >>= (\output -> show output & Text.pack & Text.putStrLn)
+    >>= showAsTextThenPrint
 
   getNameFail `orM` getNameFail
     & runValidateT
     & evaluateStateT 0
-    >>= (\output -> show output & Text.pack & Text.putStrLn)
+    >>= showAsTextThenPrint
 
   getNameSuccessFail
     & runValidateT
     & evaluateStateT 0 --flip runStateT 0
-    >>= (\output -> show output & Text.pack & Text.putStrLn)
+    >>= showAsTextThenPrint
 
   getNameSuccessFail
     & flip runStateT 0
     & runValidateT
-    >>= (\output -> show output & Text.pack & Text.putStrLn)
+    >>= showAsTextThenPrint
 
   getNameFailFail
     & runValidateT
     & flip runStateT 0
-    >>= (\output -> show output & Text.pack & Text.putStrLn)
+    >>= showAsTextThenPrint
 
   getNameFailFail
     & flip runStateT 0
     & runValidateT
-    >>= (\output -> show output & Text.pack & Text.putStrLn)
+    >>= showAsTextThenPrint
 
   makeExodiaA
     & flip Strict.runStateT [1,2] 
     & runValidateT
-    >>= (\output -> show output & Text.pack & Text.putStrLn)
+    >>= showAsTextThenPrint
 
   makeExodiaA
     & runValidateT
     & flip Strict.runStateT [1,2] 
-    >>= (\output -> show output & Text.pack & Text.putStrLn)
+    >>= showAsTextThenPrint
 
   makeExodiaA
     & runValidateT
     & flip Strict.runStateT []
-    >>= (\output -> show output & Text.pack & Text.putStrLn) 
+    >>= showAsTextThenPrint 
 
   makeExodiaA
     & flip Strict.runStateT []
     & runValidateT
-    >>= (\output -> show output & Text.pack & Text.putStrLn) 
+    >>= showAsTextThenPrint 
 
   makeExodiaM
     & flip Strict.runStateT [1,2] 
     & runValidateT
-    >>= (\output -> show output & Text.pack & Text.putStrLn)
+    >>= showAsTextThenPrint
 
   makeExodiaM
     & runValidateT
     & flip Strict.runStateT [1,2] 
-    >>= (\output -> show output & Text.pack & Text.putStrLn)
+    >>= showAsTextThenPrint
 
   makeExodiaM
     & runValidateT
     & flip Strict.runStateT []
-    >>= (\output -> show output & Text.pack & Text.putStrLn) 
+    >>= showAsTextThenPrint 
 
   makeExodiaM
     & flip Strict.runStateT []
     & runValidateT
-    >>= (\output -> show output & Text.pack & Text.putStrLn) 
+    >>= showAsTextThenPrint 

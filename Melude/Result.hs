@@ -32,6 +32,14 @@ fromErrorWithCallStack stack error = error & Failure (Just stack) & NonEmptySeq.
 fromError :: e -> Result e a
 fromError error = error & Failure Nothing & NonEmptySeq.singleton & Failures
 
+toMaybe :: Result e a -> Maybe a
+toMaybe (Success a) = Just a
+toMaybe (Failures _) = Nothing
+
+toEither :: Result e a -> Either (NonEmptySeq (Failure e)) a
+toEither (Success a) = Right a 
+toEither (Failures failures) = Left failures
+
 toErrors :: Result e a -> Seq e
 toErrors (Failures failures) = failures <&> failureToError & NonEmptySeq.toSeq
 toErrors _ = Seq.empty
@@ -61,5 +69,4 @@ instance Applicative (Result e) where
 instance Monad (Result e) where
   (>>=) (Failures failures) _ = Failures failures
   (>>=) (Success a) f = f a
-
 
