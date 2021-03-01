@@ -2,7 +2,7 @@
 module Melude.Result where
 
 import Prelude hiding (fail, error)
-import GHC.Stack (CallStack, prettyCallStack)
+import GHC.Stack (CallStack, prettyCallStack, HasCallStack, callStack)
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Sequence.NonEmpty (NESeq)
@@ -26,8 +26,8 @@ data Result e a
 -- pattern Fail :: e -> CallStack -> Result e a
 -- pattern Fail e cs = Failures ((Failure (Just cs) e) :<|| Seq.Empty)
 
-fromErrorWithCallStack :: CallStack -> e -> Result e a
-fromErrorWithCallStack stack error = error & Failure (Just stack) & NonEmptySeq.singleton & Failures
+fromErrorWithCallStack :: HasCallStack => e -> Result e a
+fromErrorWithCallStack error = error & Failure (Just callStack) & NonEmptySeq.singleton & Failures
 
 fromError :: e -> Result e a
 fromError error = error & Failure Nothing & NonEmptySeq.singleton & Failures
