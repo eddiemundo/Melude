@@ -32,6 +32,14 @@ fromErrorWithCallStack error = error & Failure (Just callStack) & NonEmptySeq.si
 fromError :: e -> Result e a
 fromError error = error & Failure Nothing & NonEmptySeq.singleton & Failures
 
+fromJustOrErrWithCallStack :: HasCallStack => e -> Maybe a -> Result e a
+fromJustOrErrWithCallStack _ (Just a) = Success a
+fromJustOrErrWithCallStack e Nothing = fromErrorWithCallStack e
+
+fromRightOrErrWithCallStack :: HasCallStack => (l -> e) -> Either l r -> Result e r
+fromRightOrErrWithCallStack _ (Right a) = Success a
+fromRightOrErrWithCallStack handle (Left l) = handle l & fromErrorWithCallStack
+
 toMaybe :: Result e a -> Maybe a
 toMaybe (Success a) = Just a
 toMaybe (Failures _) = Nothing
