@@ -12,6 +12,7 @@ import Data.Function ((&))
 import Data.Foldable (Foldable(fold))
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
+import Data.Bifoldable (Bifoldable(bifoldr))
 
 type NonEmptySeq a = NESeq a
 
@@ -77,4 +78,8 @@ instance Applicative (Result e) where
 instance Monad (Result e) where
   (>>=) (Failures failures) _ = Failures failures
   (>>=) (Success a) f = f a
+
+instance Bifoldable Result where
+  bifoldr _ g z (Success a) = g a z
+  bifoldr f _ z (Failures failures) = failures <&> failureToError & foldr f z
 
