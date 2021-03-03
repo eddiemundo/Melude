@@ -2,18 +2,12 @@ module Main where
 
 import Prelude hiding (error, fail)
 import GHC.Stack (HasCallStack)
-import Melude.ValidateT (MonadValidate, err, runValidateT, tolerate)
+import Melude.ValidateT (MonadValidate, err, runValidateT, correct, orM, orA)
 import Control.Monad.State.Strict as Strict
 import Data.Function ((&))
-import qualified Data.Text as Text
-import qualified Data.Text.IO as Text
-import Melude.StateT.Strict (evaluateStateT)
-import qualified Melude.Result as Result
-import qualified Melude.ValidateT as ValidateT
-import Prettyprinter (Doc, Pretty(pretty, prettyList), (<+>), vsep, align)
+import Prettyprinter (Doc, Pretty(pretty), (<+>), vsep, align)
 import qualified Prettyprinter.Util as Pretty
 import Melude.NonEmptySeq (NonEmptySeq)
-import qualified Melude.NonEmptySeq as NonEmptySeq
 import Data.Foldable (Foldable(toList))
 import Data.Functor ((<&>))
 import Control.Monad.Identity (Identity(runIdentity))
@@ -30,9 +24,6 @@ instance Pretty Error where
   pretty NameNotFoundError = "NameNotFoundError"
 
 newtype Constraint = Constraint Int deriving (Show, Pretty)
-
--- instance Pretty Constraint 
-
 newtype Name = Name Int deriving (Show, Pretty)
 
 getConstraint :: (HasCallStack, MonadState [Int] m, MonadValidate Error m) => m Constraint
@@ -66,17 +57,11 @@ getNameFail = err NameNotFoundError <* put 1
 getNameSuccess :: (MonadState Int m, MonadValidate Error m) => m Name
 getNameSuccess = (Name 1 & pure) <* put 2
 
--- getNameSuccessFail :: (MonadState Int m, MonadValidate Error m) => m Name
--- getNameSuccessFail = getNameFail & correct (const getNameSuccess)
+getNameFailCorrectSuccess :: (MonadState Int m, MonadValidate Error m) => m Name
+getNameFailCorrectSuccess = getNameFail & correct (const getNameSuccess)
 
--- getNameFailFail :: (MonadState Int m, MonadValidate Error m) => m Name
--- getNameFailFail = getNameFail & correct (const getNameFail)
-
--- printResult :: Show a => Either (ValidateT.Failures e) a -> IO ()
--- printResult (Left failures) = Result.failuresToText failures & Text.putStrLn   -- show a & Text.pack & Text.putStrLn
--- printResult (Right a) = show a & Text.pack & Text.putStrLn   -- show a & Text.pack & Text.putStrLn
-
--- newtype Result l r = Result (Either l r)
+getNameFailCorrectFail :: (MonadState Int m, MonadValidate Error m) => m Name
+getNameFailCorrectFail = getNameFail & correct (const getNameFail)
 
 instance (Pretty l, Pretty r) => Pretty (Either l r) where
   pretty e = either pretty pretty e
@@ -95,43 +80,94 @@ makeDoc = undefined
 
 resultDoc :: Doc ann
 resultDoc = 
-  [ makeExodiaA
-    & flip Strict.runStateT [1,2]
+  [ getNameSuccess `orA` getNameFail 
+    & runValidateT
+    & flip runStateT 0
+    & runIdentity
+    & pretty
+  , getNameFail `orA` getNameSuccess
+    & runValidateT
+    & flip runStateT 0
+    & runIdentity
+    & pretty
+  , getNameFail `orA` getNameFail
+    & runValidateT
+    & flip runStateT 0
+    & runIdentity
+    & pretty
+  , getNameSuccess `orM` getNameFail 
+    & runValidateT
+    & flip runStateT 0
+    & runIdentity
+    & pretty
+  , getNameFail `orM` getNameSuccess
+    & runValidateT
+    & flip runStateT 0
+    & runIdentity
+    & pretty
+  , getNameFail `orM` getNameFail
+    & runValidateT
+    & flip runStateT 0
+    & runIdentity
+    & pretty
+  , getNameFailCorrectSuccess
+    & runValidateT
+    & flip runStateT 0
+    & runIdentity
+    & pretty
+  , getNameFailCorrectSuccess
+    & flip runStateT 0
+    & runValidateT
+    & runIdentity
+    & pretty
+  , getNameFailCorrectFail 
+    & runValidateT
+    & flip runStateT 0
+    & runIdentity
+    & pretty
+  , getNameFailCorrectFail 
+    & flip runStateT 0
+    & runValidateT
+    & runIdentity
+    & pretty
+  , makeExodiaA
+    & flip runStateT [1,2]
     & runValidateT
     & runIdentity
     & pretty
   , makeExodiaA
     & runValidateT
-    & flip Strict.runStateT [1,2]
+    & flip runStateT [1,2]
     & runIdentity
     & pretty
   , makeExodiaA
     & runValidateT
-    & flip Strict.runStateT []
+    & flip runStateT []
     & runIdentity
     & pretty
+    -- note by running state first we lost applicative effect of ValidateT
   , makeExodiaA
-    & flip Strict.runStateT []
+    & flip runStateT []
     & runValidateT
     & runIdentity
     & pretty
   , makeExodiaM
-    & flip Strict.runStateT [1,2]
+    & flip runStateT [1,2]
     & runValidateT
     & runIdentity
     & pretty
   , makeExodiaM
     & runValidateT
-    & flip Strict.runStateT [1,2]
+    & flip runStateT [1,2]
     & runIdentity
     & pretty
   , makeExodiaM
     & runValidateT
-    & flip Strict.runStateT []
+    & flip runStateT []
     & runIdentity
     & pretty
   , makeExodiaM
-    & flip Strict.runStateT []
+    & flip runStateT []
     & runValidateT
     & runIdentity
     & pretty
@@ -141,59 +177,6 @@ resultDoc =
 
 main :: IO ()
 main = do
-  -- getNameFail & tolerate & runValidateT & evaluateStateT 0 >>= prettyPrint
-
---   getNameSuccess `orA` getNameFail 
---     & runValidateT
---     & evaluateStateT 0
---     >>= showAsTextThenPrint
-
---   getNameFail `orA` getNameSuccess
---     & runValidateT
---     & evaluateStateT 0
---     >>= showAsTextThenPrint
-
---   getNameFail `orA` getNameFail
---     & runValidateT
---     & evaluateStateT 0
---     >>= showAsTextThenPrint
-
---   getNameSuccess `orM` getNameFail 
---     & runValidateT
---     & evaluateStateT 0
---     >>= showAsTextThenPrint
-
---   getNameFail `orM` getNameSuccess
---     & runValidateT
---     & evaluateStateT 0
---     >>= showAsTextThenPrint
-
---   getNameFail `orM` getNameFail
---     & runValidateT
---     & evaluateStateT 0
---     >>= showAsTextThenPrint
-
---   getNameSuccessFail
---     & runValidateT
---     & evaluateStateT 0 --flip runStateT 0
---     >>= showAsTextThenPrint
-
-  -- getNameSuccessFail
-  --   & flip runStateT 0
-  --   & runValidateT
-  --   >>= showAsTextThenPrint
-
-  -- getNameFailFail
-  --   & runValidateT
-  --   & flip runStateT 0
-  --   >>= showAsTextThenPrint
-
-  -- getNameFailFail
-  --   & flip runStateT 0
-  --   & runValidateT
-  --   >>= showAsTextThenPrint
-
-  --   >>= prettyPrint
   resultDoc & Pretty.putDocW 80
 
 

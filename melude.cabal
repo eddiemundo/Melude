@@ -174,7 +174,7 @@ library
     Melude.NonEmptySeq,
     Melude.Monad,
     Melude.StateT.Strict,
-    Melude.Result,
+    --Melude.Result,
     Melude.ValidateT
 
 executable melude
@@ -189,7 +189,7 @@ executable melude
     Melude.NonEmptySeq,
     Melude.Monad,
     Melude.StateT.Strict,
-    Melude.Result,
+    --Melude.Result,
     Melude.ValidateT
 
   -- hs-source-dirs:
