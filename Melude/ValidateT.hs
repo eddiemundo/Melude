@@ -32,6 +32,11 @@ instance Pretty e => Pretty (Failure e) where
 
 type Failures e = NonEmptySeq (Failure e)
 
+type Result e a = Either (Failures e) a
+
+errorToResult :: HasCallStack => e -> Result e a
+errorToResult e = Failure callStack e & NonEmptySeq.singleton & Left
+
 newtype ValidateT e m a = ValidateT (Internal.ValidateT (Failures e) m a)
   deriving 
   ( Functor
@@ -50,14 +55,14 @@ newtype ValidateT e m a = ValidateT (Internal.ValidateT (Failures e) m a)
 
 type Validate e a = ValidateT e Identity a
 
-runValidateT :: Functor m => ValidateT e m a -> m (Either (Failures e) a)
+runValidateT :: Functor m => ValidateT e m a -> m (Result e a) 
 runValidateT (ValidateT internal) = Internal.runValidateT internal
 
 class Monad m => MonadValidateExtension e m | m -> e where
-  tolerate :: m a -> m (Either (Failures e) a)
+  tolerate :: m a -> m (Result e a)
 
 instance Monad m => MonadValidateExtension e (ValidateT e m) where
-  tolerate :: ValidateT e m a -> ValidateT e m (Either (Failures e) a)
+  tolerate :: ValidateT e m a -> ValidateT e m (Result e a)
   tolerate (ValidateT m) = lift $ Internal.runValidateT m  
 
 type MonadValidate e m = (HasCallStack, Internal.MonadValidate (Failures e) m, MonadValidateExtension e m)
@@ -110,7 +115,7 @@ newtype WrappedMonadTrans (t :: (* -> *) -> * -> *) (m :: * -> *) (a :: *)
   deriving (Functor, Applicative, Monad, MonadTrans, MonadTransControl)
 
 instance (MonadTransControl t, Monad (t m), MonadValidateExtension e m) => MonadValidateExtension e (WrappedMonadTrans t m) where
-  tolerate :: WrappedMonadTrans t m a -> WrappedMonadTrans t m (Either (Failures e) a)
+  tolerate :: WrappedMonadTrans t m a -> WrappedMonadTrans t m (Result e a)
   tolerate wmt1 = liftWith (\run -> tolerate (run wmt1)) >>= either (pure . Left) (fmap Right . restoreT . pure)
 
 deriving via (WrappedMonadTrans IdentityT m) instance MonadValidateExtension e m => MonadValidateExtension e (IdentityT m)
