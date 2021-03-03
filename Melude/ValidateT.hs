@@ -1,6 +1,23 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Melude.ValidateT where
+module Melude.ValidateT 
+  ( errorToResult
+  , Result
+  , ValidateT(..)
+  , Validate
+  , runValidateT
+  , MonadValidate(materialize)
+  , materializeAsMaybe
+  , dematerialize
+  , correct
+  , err
+  , errs
+  , fromJustOrErr
+  , fromRightOrErr
+  , orA
+  , orM
+  , Internal.WrappedMonadTrans
+  ) where
 
 import Control.Monad.State.Lazy as Lazy
 import Control.Monad.State.Strict as Strict
@@ -18,6 +35,7 @@ import qualified Data.Sequence.NonEmpty as NonEmptySeq
 -- monad-validate
 import qualified Control.Monad.Validate as Internal
 import qualified Control.Monad.Validate.Class as Internal
+import qualified Control.Monad.Validate.Class ()
 import qualified Control.Monad.Validate.Internal as Internal
 
 -- prettyprinter
@@ -66,17 +84,13 @@ instance Monad m => MonadValidate e (ValidateT e m) where
   materialize :: ValidateT e m a -> ValidateT e m (Result e a)
   materialize (ValidateT m) = lift $ Internal.runValidateT m  
 
--- type MonadValidate e m = (HasCallStack, Internal.MonadValidate (Failures e) m, MonadValidate e m)
+materializeAsMaybe :: MonadValidate e m => m a -> m (Maybe a)
+materializeAsMaybe = Internal.tolerate
 
 dematerialize :: MonadValidate e m => m (Result e a) -> m a
 dematerialize m = m >>= \case
   Left failures -> Internal.refute failures
   Right a -> pure a
-
-correct :: MonadValidate e m => (NonEmptySeq (Failure e) -> m a) -> m a -> m a
-correct f ma = materialize ma >>= \case
-  Left failures -> f failures
-  Right _ -> ma
 
 err :: (HasCallStack, MonadValidate e m) => e -> m a
 err e = Internal.refute $ NonEmptySeq.singleton (Failure callStack e)
@@ -84,8 +98,10 @@ err e = Internal.refute $ NonEmptySeq.singleton (Failure callStack e)
 errs :: (HasCallStack, MonadValidate e m) => NonEmptySeq e -> m a
 errs es = Internal.refute $ es <&> Failure callStack
 
-materializeAsMaybe :: MonadValidate e m => m a -> m (Maybe a)
-materializeAsMaybe = Internal.tolerate
+correct :: MonadValidate e m => (NonEmptySeq (Failure e) -> m a) -> m a -> m a
+correct f ma = materialize ma >>= \case
+  Left failures -> f failures
+  Right _ -> ma
 
 fromJustOrErr :: MonadValidate e m => e -> Maybe a -> m a
 fromJustOrErr e Nothing = e & err
@@ -116,18 +132,20 @@ orA ma1 ma2 = correct (\failures1 -> correct (\failures2 -> Internal.refute (fai
 --     Success a -> Success a
 --   & ValidateT
 
-newtype WrappedMonadTrans (t :: (* -> *) -> * -> *) (m :: * -> *) (a :: *)
-  = WrappedMonadTrans { unWrappedMonadTrans :: t m a }
-  deriving (Functor, Applicative, Monad, MonadTrans, MonadTransControl)
+-- newtype WrappedMonadTrans (t :: (* -> *) -> * -> *) (m :: * -> *) (a :: *)
+--   = WrappedMonadTrans { unWrappedMonadTrans :: t m a }
+--   deriving (Functor, Applicative, Monad, MonadTrans, MonadTransControl)
 
-deriving via (Internal.WrappedMonadTrans (WrappedMonadTrans t) m) 
-  instance (Monad (t m), MonadTransControl t, Internal.MonadValidate e m) => Internal.MonadValidate e (WrappedMonadTrans t m)
+-- deriving via (Internal.WrappedMonadTrans (WrappedMonadTrans t) m) 
+--   instance Internal.MonadValidate e m => Internal.MonadValidate e (WrappedMonadTrans t m)
 
-instance (MonadTransControl t, Monad (t m), MonadValidate e m) => MonadValidate e (WrappedMonadTrans t m) where
-  materialize :: WrappedMonadTrans t m a -> WrappedMonadTrans t m (Result e a)
+instance (MonadTransControl t, Monad (t m), MonadValidate e m) => MonadValidate e (Internal.WrappedMonadTrans t m) where
+  materialize :: Internal.WrappedMonadTrans t m a -> Internal.WrappedMonadTrans t m (Result e a)
   materialize wmt1 = liftWith (\run -> materialize (run wmt1)) >>= either (pure . Left) (fmap Right . restoreT . pure)
 
-deriving via (WrappedMonadTrans IdentityT m) instance MonadValidate e m => MonadValidate e (IdentityT m)
-deriving via (WrappedMonadTrans (ReaderT r) m) instance MonadValidate e m => MonadValidate e (ReaderT r m)
-deriving via (WrappedMonadTrans (Lazy.StateT s) m) instance MonadValidate e m => MonadValidate e (Lazy.StateT s m)
-deriving via (WrappedMonadTrans (Strict.StateT s) m) instance MonadValidate e m => MonadValidate e (Strict.StateT s m)
+-- deriving via (WrappedMonadTrans IdentityT m) instance Internal.MonadValidate e m => Internal.MonadValidate e (IdentityT m)
+
+deriving via (Internal.WrappedMonadTrans IdentityT m) instance MonadValidate e m => MonadValidate e (IdentityT m)
+deriving via (Internal.WrappedMonadTrans (ReaderT r) m) instance MonadValidate e m => MonadValidate e (ReaderT r m)
+deriving via (Internal.WrappedMonadTrans (Lazy.StateT s) m) instance MonadValidate e m => MonadValidate e (Lazy.StateT s m)
+deriving via (Internal.WrappedMonadTrans (Strict.StateT s) m) instance MonadValidate e m => MonadValidate e (Strict.StateT s m)
