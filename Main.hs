@@ -51,16 +51,16 @@ makeExodiaM = do
 makeExodiaA :: (HasCallStack, Applicative m, MonadState [Int] m, MonadValidate Error m) => m Exodia
 makeExodiaA = Exodia <$> getConstraint <*> getName
 
-getNameFail :: (MonadState Int m, MonadValidate Error m) => m Name
+getNameFail :: (HasCallStack, MonadState Int m, MonadValidate Error m) => m Name
 getNameFail = err NameNotFoundError <* put 1
 
-getNameSuccess :: (MonadState Int m, MonadValidate Error m) => m Name
+getNameSuccess :: (HasCallStack, MonadState Int m, MonadValidate Error m) => m Name
 getNameSuccess = (Name 1 & pure) <* put 2
 
-getNameFailCorrectSuccess :: (MonadState Int m, MonadValidate Error m) => m Name
+getNameFailCorrectSuccess :: (HasCallStack, MonadState Int m, MonadValidate Error m) => m Name
 getNameFailCorrectSuccess = getNameFail & correct (const getNameSuccess)
 
-getNameFailCorrectFail :: (MonadState Int m, MonadValidate Error m) => m Name
+getNameFailCorrectFail :: (HasCallStack, MonadState Int m, MonadValidate Error m) => m Name
 getNameFailCorrectFail = getNameFail & correct (const getNameFail)
 
 instance (Pretty l, Pretty r) => Pretty (Either l r) where
@@ -78,7 +78,7 @@ prettyPrint result = pretty result & Pretty.putDocW 80
 makeDoc :: a -> Doc a
 makeDoc = undefined
 
-resultDoc :: Doc ann
+resultDoc :: HasCallStack => Doc ann
 resultDoc = 
   [ getNameSuccess `orA` getNameFail 
     & runValidateT
