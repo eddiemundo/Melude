@@ -59,16 +59,21 @@ runValidateT :: Functor m => ValidateT e m a -> m (Result e a)
 runValidateT (ValidateT internal) = Internal.runValidateT internal
 
 class Monad m => MonadValidateExtension e m | m -> e where
-  tolerate :: m a -> m (Result e a)
+  materialize :: m a -> m (Result e a)
 
 instance Monad m => MonadValidateExtension e (ValidateT e m) where
-  tolerate :: ValidateT e m a -> ValidateT e m (Result e a)
-  tolerate (ValidateT m) = lift $ Internal.runValidateT m  
+  materialize :: ValidateT e m a -> ValidateT e m (Result e a)
+  materialize (ValidateT m) = lift $ Internal.runValidateT m  
 
 type MonadValidate e m = (HasCallStack, Internal.MonadValidate (Failures e) m, MonadValidateExtension e m)
 
+dematerialize :: MonadValidate e m => m (Result e a) -> m a
+dematerialize m = m >>= \case
+  Left failures -> Internal.refute failures
+  Right a -> pure a
+
 correct :: MonadValidate e m => (NonEmptySeq (Failure e) -> m a) -> m a -> m a
-correct f ma = tolerate ma >>= \case
+correct f ma = materialize ma >>= \case
   Left failures -> f failures
   Right _ -> ma
 
@@ -78,8 +83,8 @@ err e = Internal.refute $ NonEmptySeq.singleton (Failure callStack e)
 errs :: MonadValidate e m => NonEmptySeq e -> m a
 errs es = Internal.refute $ es <&> Failure callStack
 
-tolerateAsMaybe :: MonadValidate e m => m a -> m (Maybe a)
-tolerateAsMaybe = Internal.tolerate
+materializeAsMaybe :: MonadValidate e m => m a -> m (Maybe a)
+materializeAsMaybe = Internal.tolerate
 
 fromJustOrErr :: MonadValidate e m => e -> Maybe a -> m a
 fromJustOrErr e Nothing = e & err
@@ -115,8 +120,8 @@ newtype WrappedMonadTrans (t :: (* -> *) -> * -> *) (m :: * -> *) (a :: *)
   deriving (Functor, Applicative, Monad, MonadTrans, MonadTransControl)
 
 instance (MonadTransControl t, Monad (t m), MonadValidateExtension e m) => MonadValidateExtension e (WrappedMonadTrans t m) where
-  tolerate :: WrappedMonadTrans t m a -> WrappedMonadTrans t m (Result e a)
-  tolerate wmt1 = liftWith (\run -> tolerate (run wmt1)) >>= either (pure . Left) (fmap Right . restoreT . pure)
+  materialize :: WrappedMonadTrans t m a -> WrappedMonadTrans t m (Result e a)
+  materialize wmt1 = liftWith (\run -> materialize (run wmt1)) >>= either (pure . Left) (fmap Right . restoreT . pure)
 
 deriving via (WrappedMonadTrans IdentityT m) instance MonadValidateExtension e m => MonadValidateExtension e (IdentityT m)
 deriving via (WrappedMonadTrans (ReaderT r) m) instance MonadValidateExtension e m => MonadValidateExtension e (ReaderT r m)
