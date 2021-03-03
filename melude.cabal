@@ -21,7 +21,9 @@ common common-build-depends
     nonempty-containers,
     mtl,
     transformers-base,
-    monad-control
+    monad-control,
+    monad-validate,
+    prettyprinter
 
 common common-ghc-options
   ghc-options:
