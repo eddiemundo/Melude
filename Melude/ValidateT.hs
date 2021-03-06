@@ -1,8 +1,9 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Melude.ValidateT 
-  ( errorToResult
-  , Result
+  ( Result
+  , errorToResult
+  , maybeToResult
   , ValidateT(..)
   , Validate
   , runValidateT
@@ -72,6 +73,10 @@ type Result e a = Either (Failures e) a
 
 errorToResult :: HasCallStack => e -> Result e a
 errorToResult e = Failure callStack e & NonEmptySeq.singleton & Left
+
+maybeToResult :: HasCallStack => e -> Maybe a -> Result e a
+maybeToResult _ (Just a) = Right a
+maybeToResult e Nothing = errorToResult e
 
 newtype ValidateT e m a = ValidateT (Internal.ValidateT (Failures e) m a)
   deriving 
