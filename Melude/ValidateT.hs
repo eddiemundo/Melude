@@ -10,6 +10,7 @@ module Melude.ValidateT
   , MonadValidate(materialize)
   , materializeAsMaybe
   , dematerialize
+  , dematerializeMaybe
   , correct
   , err
   , errs
@@ -123,6 +124,11 @@ dematerialize :: MonadValidate e m => m (Result e a) -> m a
 dematerialize mr = mr >>= \case
   Left failures -> fail failures
   Right a -> pure a
+
+dematerializeMaybe :: MonadValidate e m => e -> m (Maybe a) -> m a
+dematerializeMaybe e mma = mma >>= \case
+  Nothing -> err e
+  Just a -> pure a
 
 correct :: MonadValidate e m => (NonEmptySeq (Failure e) -> m a) -> m a -> m a
 correct f ma = materialize ma >>= \case
