@@ -6,6 +6,7 @@ module Melude.ValidateT
   , maybeToResult
   , ValidateT(..)
   , Validate
+  , runValidate
   , runValidateT
   , MonadValidate(materialize)
   , materializeAsMaybe
@@ -22,13 +23,6 @@ module Melude.ValidateT
   , Internal.WrappedMonadTrans
   ) where
 
--- base
-import Prelude hiding (fail)
-import GHC.Stack (HasCallStack, callStack, CallStack, prettyCallStack)
-import Data.Function ((&))
-import Data.Functor ((<&>))
-import Data.Functor.Identity (Identity)
-import Control.Monad.IO.Class (MonadIO)
 
 -- transformers-base
 import Control.Monad.Base (MonadBase)
@@ -61,6 +55,15 @@ import Prettyprinter (Pretty(pretty), vsep)
 import Melude.NonEmptySeq (NonEmptySeq)
 import qualified Melude.NonEmptySeq as NonEmptySeq
 import qualified Melude.Either as Either
+
+-- base
+import Prelude hiding (fail)
+import GHC.Stack (HasCallStack, callStack, CallStack, prettyCallStack)
+import Data.Function ((&))
+import Data.Functor ((<&>))
+import Data.Functor.Identity (Identity (runIdentity))
+import Control.Monad.IO.Class (MonadIO)
+import Control.Category ((>>>))
 
 data Failure e = Failure !CallStack !e
   deriving Functor
@@ -96,6 +99,9 @@ newtype ValidateT e m a = ValidateT (Internal.ValidateT (Failures e) m a)
   )
 
 type Validate e a = ValidateT e Identity a
+
+runValidate :: Validate e a -> Result e a
+runValidate = runValidateT >>> runIdentity
 
 runValidateT :: Functor m => ValidateT e m a -> m (Result e a) 
 runValidateT (ValidateT internal) = Internal.runValidateT internal
