@@ -66,7 +66,7 @@ import Control.Monad.IO.Class (MonadIO)
 import Control.Category ((>>>))
 
 data Failure e = Failure !CallStack !e
-  deriving Functor
+  deriving (Functor, Show)
 
 instance Pretty e => Pretty (Failure e) where
   pretty (Failure stack e) = [pretty e, pretty $ prettyCallStack stack] & vsep
