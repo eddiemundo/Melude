@@ -68,6 +68,9 @@ import Control.Category ((>>>))
 data Failure e = Failure !CallStack !e
   deriving (Functor, Show)
 
+instance Eq e => Eq (Failure e) where
+  (==) (Failure _ e1) (Failure _ e2) = e1 == e2
+
 instance Pretty e => Pretty (Failure e) where
   pretty (Failure stack e) = [pretty e, pretty $ prettyCallStack stack] & vsep
 
