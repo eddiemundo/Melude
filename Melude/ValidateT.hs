@@ -1,7 +1,8 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Melude.ValidateT 
-  ( Result
+  ( Failure(..)
+  , Result
   , errorToResult
   , maybeToResult
   , ValidateT(..)
