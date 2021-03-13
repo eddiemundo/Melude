@@ -9,7 +9,7 @@ module Melude.ValidateT
   , Validate
   , runValidate
   , runValidateT
-  , MonadValidate(materialize)
+  , MonadValidate(..)
   , materializeAsMaybe
   , dematerialize
   , dematerializeMaybe
