@@ -148,7 +148,7 @@ dematerializeMaybe e mma = mma >>= \case
 correct :: MonadValidate e m => (NonEmptySeq (Failure e) -> m a) -> m a -> m a
 correct f ma = materialize ma >>= \case
   Left failures -> f failures
-  Right _ -> ma
+  Right a -> pure a
 
 fromJustOrErr :: MonadValidate e m => e -> Maybe a -> m a
 fromJustOrErr e Nothing = e & err
