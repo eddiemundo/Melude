@@ -3,6 +3,7 @@
 module Melude.ValidateT 
   ( Failure(..)
   , Result
+  , liftResult
   , errorToResult
   , maybeToResult
   , ValidateT(..)
@@ -120,6 +121,10 @@ instance Monad m => MonadValidate e (ValidateT e m) where
 
   materialize :: ValidateT e m a -> ValidateT e m (Result e a)
   materialize (ValidateT m) = lift $ Internal.runValidateT m  
+
+liftResult :: MonadValidate e m => Result e a -> m a
+liftResult (Left failures) = fail failures 
+liftResult (Right a) = pure a 
 
 err :: (HasCallStack, MonadValidate e m) => e -> m a
 err e = Failure callStack e & NonEmptySeq.singleton & fail
