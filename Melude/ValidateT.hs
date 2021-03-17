@@ -9,6 +9,7 @@ module Melude.ValidateT
   , ValidateT(..)
   , Validate
   , runValidate
+  , validatedOrElse
   , runValidateT
   , MonadValidate(..)
   , materializeAsMaybe
@@ -107,6 +108,9 @@ type Validate e a = ValidateT e Identity a
 
 runValidate :: Validate e a -> Result e a
 runValidate = runValidateT >>> runIdentity
+
+validatedOrElse :: (Failures e -> a) -> Validate e a -> a
+validatedOrElse f v = v & runValidate & Either.rightOrElse f
 
 runValidateT :: Functor m => ValidateT e m a -> m (Result e a) 
 runValidateT (ValidateT internal) = Internal.runValidateT internal
