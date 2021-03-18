@@ -154,11 +154,11 @@ correct f ma = materialize ma >>= \case
   Left failures -> f failures
   Right a -> pure a
 
-fromJustOrErr :: MonadValidate e m => e -> Maybe a -> m a
+fromJustOrErr :: (MonadValidate e m, HasCallStack) => e -> Maybe a -> m a
 fromJustOrErr e Nothing = e & err
 fromJustOrErr _ (Just a) = a & pure
 
-fromRightOrErr :: MonadValidate e m => (l -> e) -> Either l r -> m r
+fromRightOrErr :: (MonadValidate e m, HasCallStack) => (l -> e) -> Either l r -> m r
 fromRightOrErr f (Left l) = f l & err
 fromRightOrErr _ (Right r) = r & pure
 
