@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Melude.ValidateT 
   ( Failure(..)
+  , containsError
   , Result
   , liftResult
   , errorToResult
@@ -67,6 +68,7 @@ import Data.Functor ((<&>))
 import Data.Functor.Identity (Identity (runIdentity))
 import Control.Monad.IO.Class (MonadIO)
 import Control.Category ((>>>))
+import qualified Melude.Maybe as Maybe
 
 data Failure e = Failure !CallStack !e
   deriving (Functor, Show)
@@ -168,8 +170,8 @@ orM ma1 ma2 = correct (const ma2) ma1
 orA :: MonadValidate e m => m a -> m a -> m a
 orA ma1 ma2 = correct (\failures1 -> correct (\failures2 -> fail (failures1 <> failures2)) ma2) ma1
 
--- containsError :: (Functor m, Eq e) => e -> ValidateT e m a -> m Bool
--- containsError error result = toErrors result <&> elem error
+containsError :: Eq e => e -> NonEmptySeq (Failure e) -> Bool
+containsError e errors = errors & NonEmptySeq.findIndexL (\(Failure _ e') -> e' == e) & Maybe.toBool
 
 mapErrors :: Monad m => (e1 -> e2) -> ValidateT e1 m a -> ValidateT e2 m a
 mapErrors f (ValidateT v) = 
